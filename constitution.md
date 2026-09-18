@@ -1,6 +1,6 @@
 # Meta Gunu constitution
 
-Last verified: 2026-09-18 on branch `codex/project-plan`.
+Last verified: 2026-09-18 on branch `codex/phone-voice-prototype`.
 
 This file is the project's living memory and rulebook. Code-changing pull requests must update it. Detailed history belongs in linked ADRs and documentation; this file records the current truth.
 
@@ -42,10 +42,18 @@ Implemented and covered by automated checks:
 - Stop and end-session semantics are represented in the reducer.
 - SwiftUI shell displays Stopped, Waiting for wake phrase, Conversing, and Interrupted states plus the active source.
 - Shared TypeScript schemas validate session, task, memory, and connector messages.
+- The Live relay checks explicit source intent and budget state, keeps the provider credential and session configuration server-side, and accepts only audio-append and close events from the phone.
 - Gateway primitives enforce configured budgets and idempotent task creation.
 - Gateway supports task polling/cancellation and explicit pending-approval listing/resolution.
 - PostgreSQL schema separates conversations, memories, tasks, approvals, devices, and usage.
 - Codex bridge implements initialize/initialized, thread start/resume, turn start, notification streaming, interruption, and explicit approval responses over stdio.
+
+Compile-verified but not provider/device integration-verified:
+
+- **Talk on iPhone** is the only implemented code path that requests phone microphone permission, activates the audio session, and explicitly selects the built-in input.
+- Native phone capture converts buffers to mono 24 kHz PCM in memory, checks the expected route on every buffer, and tears down capture on route mismatch, session end, stop, or connection failure.
+- The iPhone client can stream capture audio, play Live output audio, and display transcript deltas through an authenticated gateway WebSocket.
+- OpenAI primary Live WebSocket connection from the gateway.
 
 Scaffolded but not integration-verified:
 
@@ -69,6 +77,7 @@ Not implemented or not verified:
 
 - Clean-room MIT implementation; VisionClaw is inspiration only. See ADR-0001.
 - Fail-closed audio routing controlled by a state machine. See ADR-0002.
+- The phone prototype uses a gateway-owned native Live WebSocket relay to avoid a third-party WebRTC dependency while preserving local route control. See ADR-0003.
 - Current OpenAI model identifiers are server configuration, never compiled into the app.
 - Codex app-server is preferred over pretending the cloud model has access to the user's laptop.
 - The app begins with development-token authentication; it must not be exposed publicly until production auth is installed.
@@ -84,11 +93,11 @@ Not implemented or not verified:
 
 Verified locally on 2026-09-18:
 
-- `npm test`: 7 tests passed across 4 source test files.
+- `npm test`: 9 tests passed across 5 source test files.
 - `npm run typecheck`: passed with strict TypeScript settings.
 - `npm run build`: passed.
-- `swift test --disable-sandbox --package-path packages/swift/MetaGunuCore`: 6 tests passed. `--disable-sandbox` was needed only because the surrounding Codex workspace sandbox blocked SwiftPM's nested sandbox.
-- XcodeGen 2.46.0 generated the project and `xcodebuild` produced a successful unsigned iOS Simulator build with Xcode 26.2.
+- `swift test --disable-sandbox --package-path packages/swift/MetaGunuCore`: 9 tests passed. `--disable-sandbox` was needed only because the surrounding Codex workspace sandbox blocked SwiftPM's nested sandbox.
+- XcodeGen 2.46.0 generated the project and the phone voice prototype produced a successful unsigned generic iOS Simulator build with Xcode 26.2. Audio and provider behavior were not exercised by that compile.
 - PostgreSQL 17 migration completed against a clean local Docker volume on port 55432.
 - Gateway smoke test returned healthy and an authenticated zero-spend budget snapshot.
 - `npm audit`: 0 known vulnerabilities after upgrading Vitest to 4.1.11.
@@ -100,7 +109,8 @@ Real-device test evidence is intentionally empty until the exact glasses model a
 1. Record the exact Ray-Ban Meta Wayfarer generation, model number, iOS version, and firmware.
 2. Prove or reject glasses-only microphone capture and route identity on a physical device.
 3. Benchmark candidate local wake engines for Kai Musa/Hey Gunu accuracy, battery use, binary size, and license.
-4. Implement the iOS WebRTC transport only after the route guard can shut it down synchronously.
-5. Validate one-shot wearable camera access and lifecycle cleanup.
-6. Add production authentication and deploy a private gateway.
-7. Pair one laptop and run a controlled Codex task with approvals and reconnection deduplication.
+4. Run the explicit phone voice prototype against an authorized OpenAI project, then record physical-iPhone capture, playback, teardown, latency, and interruption evidence.
+5. Compare the native WebSocket relay with WebRTC only after both can obey synchronous route shutdown.
+6. Validate one-shot wearable camera access and lifecycle cleanup.
+7. Add production authentication and deploy a private gateway.
+8. Pair one laptop and run a controlled Codex task with approvals and reconnection deduplication.

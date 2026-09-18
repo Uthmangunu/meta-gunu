@@ -13,6 +13,19 @@ export const LiveSessionRequestSchema = z.object({
 });
 export type LiveSessionRequest = z.infer<typeof LiveSessionRequestSchema>;
 
+export const LiveRelayStartSchema = z.object({
+  type: z.literal("meta_gunu.start"),
+  conversationId: z.string().uuid(),
+  audioSource: AudioSourceSchema,
+});
+export type LiveRelayStart = z.infer<typeof LiveRelayStartSchema>;
+
+export const LiveClientEventSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("session.input_audio.append"), audio: z.string().min(1).max(1_000_000) }),
+  z.object({ type: z.literal("session.close") }),
+]);
+export type LiveClientEvent = z.infer<typeof LiveClientEventSchema>;
+
 export const ResearchRequestSchema = z.object({
   conversationId: z.string().uuid(),
   prompt: z.string().min(1).max(20_000),

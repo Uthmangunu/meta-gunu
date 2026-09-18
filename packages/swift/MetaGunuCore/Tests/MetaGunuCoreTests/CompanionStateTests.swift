@@ -43,9 +43,30 @@ private let phone = AudioRoute(id: "iphone", name: "iPhone Microphone", kind: .b
     #expect(machine.state.mode == .phone)
 }
 
+@Test func phoneRouteChangeInterruptsCloudSession() {
+    var machine = CompanionStateMachine()
+    _ = machine.talkOnPhone(currentRoute: phone)
+    let permission = machine.routeChanged(to: glasses)
+    #expect(permission == .denied(reason: "Phone audio route changed"))
+    #expect(machine.state.phase == .interrupted(reason: "Phone audio route changed"))
+    #expect(machine.state.cloudSessionOpen == false)
+}
+
 @Test func stopReleasesAllState() {
     var machine = CompanionStateMachine()
     _ = machine.talkOnPhone(currentRoute: phone)
     machine.stopListening()
     #expect(machine.state == CompanionState())
+}
+
+@Test func exactSpokenEndSessionCommandIsDetected() {
+    var detector = EndSessionCommandDetector()
+    #expect(detector.consume(delta: "End", startMilliseconds: 1_000, endMilliseconds: 1_300) == false)
+    #expect(detector.consume(delta: " session.", startMilliseconds: 1_300, endMilliseconds: 1_700) == true)
+}
+
+@Test func incidentalEndSessionWordsAreNotACommand() {
+    var detector = EndSessionCommandDetector()
+    #expect(detector.consume(delta: "Please explain end session", startMilliseconds: 1_000, endMilliseconds: 2_200) == false)
+    #expect(detector.consume(delta: "End session", startMilliseconds: 3_100, endMilliseconds: 3_700) == true)
 }

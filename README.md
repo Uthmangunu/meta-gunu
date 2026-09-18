@@ -10,12 +10,13 @@ This repository contains the first engineering foundation:
 
 - a testable Swift state machine that enforces audio-source isolation;
 - a SwiftUI application shell with conversation, memory, tasks, and settings screens;
+- an explicit-tap iPhone voice prototype that streams 24 kHz PCM through an authenticated gateway relay and plays Live audio replies;
 - a TypeScript gateway boundary for Live voice, research, memories, tasks, and budgets;
 - a PostgreSQL schema with task idempotency and soft-deleted memories;
 - a laptop connector built around Codex app-server's documented JSON-RPC protocol;
 - project governance, architecture, privacy, hardware feasibility, and testing documentation.
 
-It is **not yet a verified glasses build**. Meta wearable audio capture, custom wake detection, locked-screen endurance, one-shot camera access, and real OpenAI/Codex connections still require credentials and real-device validation. The UI labels these unavailable paths instead of simulating success.
+It is **not yet a verified glasses build**. The phone voice path compiles but still needs a real provider credential and physical-iPhone runtime evidence. Meta wearable audio capture, custom wake detection, locked-screen endurance, one-shot camera access, and real Codex connections also require real-device validation. The UI labels unavailable paths instead of simulating success.
 
 ## Repository map
 
@@ -52,7 +53,7 @@ xcodegen generate
 open MetaGunu.xcodeproj
 ```
 
-The app can run in UI/demo mode without credentials. Network voice and research require `OPENAI_API_KEY`; the laptop connector additionally requires the Codex CLI and a paired gateway token. See [setup](docs/setup.md).
+The app can run in UI/demo mode without credentials. Network voice and research require `OPENAI_API_KEY`; the laptop connector additionally requires the Codex CLI and a paired gateway token. In the Simulator, open Settings and leave the voice gateway at `ws://localhost:8787/v1/live/connect`; use the same `META_GUNU_API_TOKEN` configured on the gateway. See [setup](docs/setup.md).
 
 ## Safety defaults
 
