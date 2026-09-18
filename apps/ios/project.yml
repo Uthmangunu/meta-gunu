@@ -1,0 +1,37 @@
+name: MetaGunu
+options:
+  bundleIdPrefix: com.metagunu
+  deploymentTarget:
+    iOS: "17.0"
+packages:
+  MetaGunuCore:
+    path: ../../packages/swift/MetaGunuCore
+targets:
+  MetaGunu:
+    type: application
+    platform: iOS
+    sources:
+      - MetaGunuApp
+    dependencies:
+      - package: MetaGunuCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.metagunu.app
+        PRODUCT_NAME: Meta Gunu
+        SWIFT_VERSION: "6.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Meta Gunu
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: Meta Gunu uses a microphone only after you start glasses listening or tap Talk on iPhone.
+        INFOPLIST_KEY_NSCameraUsageDescription: Meta Gunu captures one image only when you ask it to look.
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+schemes:
+  MetaGunu:
+    build:
+      targets:
+        MetaGunu: all
+    run:
+      config: Debug
+    archive:
+      config: Release

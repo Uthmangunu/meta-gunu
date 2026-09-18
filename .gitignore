@@ -2,9 +2,11 @@
 .env
 .env.*
 !.env.example
+.secrets/
 node_modules/
 dist/
 .build/
 DerivedData/
+apps/ios/MetaGunu.xcodeproj/
 local.properties
 *.xcuserstate
