@@ -6,6 +6,7 @@ import type { BudgetGuard } from "./budget.js";
 import type { Store } from "./store.js";
 
 const ownerId = "00000000-0000-4000-8000-000000000001";
+export const OPENAI_LIVE_SESSIONS_URL = "wss://api.openai.com/v1/live/sessions";
 
 export interface LiveRelayOptions {
   apiToken: string;
@@ -68,7 +69,7 @@ export class LiveRelay {
         if (!this.options.openAIKey) return fail("OPENAI_API_KEY is not configured", 4003);
         if (client.readyState !== WebSocket.OPEN) return;
 
-        upstream = new WebSocket(this.options.upstreamURL ?? "wss://api.openai.com/v1/live", {
+        upstream = new WebSocket(this.options.upstreamURL ?? OPENAI_LIVE_SESSIONS_URL, {
           headers: { authorization: `Bearer ${this.options.openAIKey}` },
         });
 

@@ -7,6 +7,12 @@
 5. Generate the iOS project from `apps/ios/project.yml`. In the app's Settings screen, set the voice gateway and development bearer token. The Simulator default is `ws://localhost:8787/v1/live/connect`; a physical iPhone cannot use the Mac's `localhost`, so use a reachable TLS endpoint (`wss://`) or a deliberately secured development tunnel.
 6. For laptop tasks, install and authenticate the Codex CLI, set `CODEX_WORKSPACE` to an allowed project directory, and run `npm run dev:connector`.
 
+The gateway connects server-to-server to OpenAI's primary Live WebSocket at
+`wss://api.openai.com/v1/live/sessions`. It sends `session.start` before any
+audio and waits for `session.started`. Re-check the official Live WebSocket
+guide before changing this transport because the older `/v1/live` path is not
+the current primary Live sessions endpoint.
+
 Never commit `.env`, Xcode user settings, provider keys, pairing tokens, recordings, or captured images.
 
 The connector permits only the configured workspace. Start with Codex approvals enabled. Existing desktop tasks are out of scope until `thread/list` and `thread/read` compatibility are tested against the user's installed Codex version.

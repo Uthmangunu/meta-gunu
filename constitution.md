@@ -1,6 +1,6 @@
 # Meta Gunu constitution
 
-Last verified: 2026-09-18 on branch `codex/phone-voice-prototype`.
+Last verified: 2026-09-21 on branch `codex/live-endpoint-readiness`.
 
 This file is the project's living memory and rulebook. Code-changing pull requests must update it. Detailed history belongs in linked ADRs and documentation; this file records the current truth.
 
@@ -53,7 +53,7 @@ Compile-verified but not provider/device integration-verified:
 - **Talk on iPhone** is the only implemented code path that requests phone microphone permission, activates the audio session, and explicitly selects the built-in input.
 - Native phone capture converts buffers to mono 24 kHz PCM in memory, checks the expected route on every buffer, and tears down capture on route mismatch, session end, stop, or connection failure.
 - The iPhone client can stream capture audio, play Live output audio, and display transcript deltas through an authenticated gateway WebSocket.
-- OpenAI primary Live WebSocket connection from the gateway.
+- OpenAI primary Live WebSocket connection from the gateway, using the currently documented `/v1/live/sessions` endpoint and waiting for `session.started` before accepting phone audio.
 
 Scaffolded but not integration-verified:
 
@@ -101,6 +101,15 @@ Verified locally on 2026-09-18:
 - PostgreSQL 17 migration completed against a clean local Docker volume on port 55432.
 - Gateway smoke test returned healthy and an authenticated zero-spend budget snapshot.
 - `npm audit`: 0 known vulnerabilities after upgrading Vitest to 4.1.11.
+
+Verified locally on 2026-09-21:
+
+- Re-checked the gateway protocol and primary WebSocket endpoint against the official OpenAI Live WebSocket guide.
+- `npm test`: 10 tests passed across 5 source test files, including a regression assertion for `wss://api.openai.com/v1/live/sessions`.
+- `npm run typecheck` and `npm run build`: passed.
+- Swift package tests: 9 passed after placing the compiler module cache in the permitted temporary workspace.
+- The phone app produced a successful unsigned generic iOS Simulator build with Xcode 26.2.
+- A real credentialed provider session remains unverified.
 
 Real-device test evidence is intentionally empty until the exact glasses model and firmware is recorded. Add dated results to `docs/hardware-feasibility.md`; do not convert unchecked rows into claims.
 

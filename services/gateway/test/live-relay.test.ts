@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LiveClientEventSchema, LiveRelayStartSchema } from "../../../packages/protocol/src/index.js";
-import { createLiveSessionStart } from "../src/live-relay.js";
+import { createLiveSessionStart, OPENAI_LIVE_SESSIONS_URL } from "../src/live-relay.js";
 
 describe("Live relay policy", () => {
   it("requires explicit phone consent before a relay can start", () => {
@@ -33,5 +33,9 @@ describe("Live relay policy", () => {
         store: false,
       },
     });
+  });
+
+  it("uses the documented primary Live WebSocket endpoint", () => {
+    expect(OPENAI_LIVE_SESSIONS_URL).toBe("wss://api.openai.com/v1/live/sessions");
   });
 });
