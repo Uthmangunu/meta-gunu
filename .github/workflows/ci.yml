@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, "codex/**"]
+
+jobs:
+  typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+
+  swift:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test --package-path packages/swift/MetaGunuCore
+      - run: brew install xcodegen
+      - run: xcodegen generate
+        working-directory: apps/ios
+      - run: xcodebuild -project MetaGunu.xcodeproj -scheme MetaGunu -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/meta-gunu-derived CODE_SIGNING_ALLOWED=NO build
+        working-directory: apps/ios

@@ -1,0 +1,32 @@
+{
+  "name": "meta-gunu",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:gateway": "tsx services/gateway/src/main.ts",
+    "dev:connector": "tsx services/codex-host/src/main.ts",
+    "db:migrate": "tsc && node dist/scripts/migrate.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "openai": "^6.0.0",
+    "pg": "^8.13.3",
+    "ws": "^8.18.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.11.11",
+    "@types/ws": "^8.5.14",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.11"
+  }
+}

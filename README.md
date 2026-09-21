@@ -1,30 +1,76 @@
 # Meta Gunu
 
-A conversational companion for Meta glasses, connected to Codex on your computer.
+Meta Gunu is an open-source, iPhone-first conversational companion for Meta glasses. The personal assistant profile is **Musa**, woken with **“Kai Musa.”** New profiles default to **“Hey Gunu.”**
 
-Repository slug: `meta-gunu`.
+The product is designed around one safety rule: the phone microphone never starts merely because the app opened or a glasses route disappeared. Glasses listening and phone listening are explicit, separate modes.
 
-## Product direction
+## Current status
 
-- One ongoing conversation: talk naturally, ask questions, and work with Codex without switching between chat and coding modes.
-- Codex runs on the connected laptop and uses the selected project's context and tools.
-- The camera stays off by default. An explicit request such as “look at this” triggers a bounded capture, then releases the camera. Do not leave a stream running merely to discard its frames.
-- Do not save camera images by default.
-- Redesign the mobile interface around conversation, connection status, and requested visual context.
-- Support remote access while the computer is awake and reachable.
-- Speech input and playback require an audio implementation; the choice of speech provider is still to be determined. Do not assume Codex alone supplies realtime audio.
-- Continuity with existing desktop tasks and personal memory must be verified; do not claim automatic access to ChatGPT saved memories.
+This repository contains the first engineering foundation:
 
-## Status
+- a testable Swift state machine that enforces audio-source isolation;
+- a SwiftUI application shell with conversation, memory, tasks, and settings screens;
+- a TypeScript gateway boundary for Live voice, research, memories, tasks, and budgets;
+- a PostgreSQL schema with task idempotency and soft-deleted memories;
+- a laptop connector built around Codex app-server's documented JSON-RPC protocol;
+- project governance, architecture, privacy, hardware feasibility, and testing documentation.
 
-Project initialized for development. No working application or glasses integration has been implemented here yet.
+It is **not yet a verified glasses build**. Meta wearable audio capture, custom wake detection, locked-screen endurance, one-shot camera access, and real OpenAI/Codex connections still require credentials and real-device validation. The UI labels these unavailable paths instead of simulating success.
 
-## Attribution and licensing
+## Repository map
 
-This project is planned as a separately named derivative of [VisionClaw](https://github.com/Uthmangunu/VisionClaw), whose upstream project is [Intent-Lab/VisionClaw](https://github.com/Intent-Lab/VisionClaw).
+```text
+apps/ios/                 SwiftUI shell (generated with XcodeGen)
+packages/swift/           Testable iOS domain and safety logic
+packages/protocol/        Shared TypeScript wire schemas
+services/gateway/         Cloud API and PostgreSQL boundary
+services/codex-host/      Outbound laptop connector and Codex bridge
+docs/                     Architecture, privacy, hardware, tests, ADRs
+constitution.md           Living status and engineering memory
+```
 
-The local reference checkout is at commit `4472c8ec4ab1ee5b42b2d0437146e72cbfbccc24`. No upstream application source has been copied into this directory yet. Preserve applicable attribution, copyright notices, and license terms when incorporating upstream material.
+## Quick start
 
-The intention is to publish the project for community use. Licensing for new contributions and any inherited source remains to be resolved before publication; this document does not relicense VisionClaw or Meta's SDK.
+Requirements: Node.js 20+, Swift 6+, Docker, and Xcode 16+.
 
-Meta Gunu is an independent project and is not an official Meta or OpenAI product.
+```bash
+cp .env.example .env
+npm install
+npm test
+npm run typecheck
+swift test --package-path packages/swift/MetaGunuCore
+docker compose up -d postgres
+npm run db:migrate
+npm run dev:gateway
+```
+
+To generate the iPhone project, install [XcodeGen](https://github.com/yonaskolb/XcodeGen), then run:
+
+```bash
+cd apps/ios
+xcodegen generate
+open MetaGunu.xcodeproj
+```
+
+The app can run in UI/demo mode without credentials. Network voice and research require `OPENAI_API_KEY`; the laptop connector additionally requires the Codex CLI and a paired gateway token. See [setup](docs/setup.md).
+
+## Safety defaults
+
+- Opening the app captures no audio.
+- Glasses mode accepts only the specifically selected Bluetooth input route.
+- A route change suspends capture before any fallback can occur.
+- Phone mode starts only after **Talk on iPhone** is tapped.
+- **Stop listening** releases all capture; **end session** returns glasses mode to local wake detection.
+- Camera access is request-scoped and images are not persisted by default.
+- Research can run in the cloud while the laptop is offline; laptop-only tasks report unavailable.
+- Consequential actions require a separate approval and a tested integration.
+
+## Development
+
+Read [AGENTS.md](AGENTS.md) and [constitution.md](constitution.md) before changing code. Work starts on `codex/project-plan`; implementation changes use focused `codex/<feature>` branches and pull requests.
+
+## Attribution and license
+
+Meta Gunu was inspired by [VisionClaw](https://github.com/Intent-Lab/VisionClaw). The project is a clean-room implementation: no VisionClaw application source has been copied. See [NOTICE](NOTICE) and [the licensing decision](docs/decisions/0001-clean-room-and-license.md).
+
+New Meta Gunu code is licensed under MIT. Meta SDKs and third-party services retain their own terms. Meta Gunu is independent and is not an official Meta or OpenAI product.
