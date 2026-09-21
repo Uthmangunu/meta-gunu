@@ -18,6 +18,19 @@ struct SettingsView: View {
             } footer: {
                 Text("A route must be verified on the physical glasses. Names alone are not treated as proof, and Meta Gunu never falls back to the phone microphone.")
             }
+            Section {
+                TextField("ws://gateway:8787/v1/live/connect", text: $model.gatewayWebSocketURL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.URL)
+                SecureField("Development bearer token", text: $model.gatewayToken)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+            } header: {
+                Text("Voice gateway")
+            } footer: {
+                Text("The default works in the iOS Simulator when the gateway runs on this Mac. A physical iPhone needs the Mac's reachable address and TLS before use outside a trusted development network.")
+            }
             Section("Storage") {
                 Button("Review memory") {}
                 Button("Clear conversation history", role: .destructive) {}
@@ -27,6 +40,7 @@ struct SettingsView: View {
                 LabeledContent("Wearable integration", value: "Not verified")
                 LabeledContent("Wake engine", value: "Not selected")
                 LabeledContent("Camera", value: "Off")
+                LabeledContent("Phone voice", value: "Prototype")
             }
         }
         .navigationTitle("Settings")

@@ -10,6 +10,7 @@ struct ConversationView: View {
                 statusOrb
                 sourceCard
                 controls
+                if !model.liveTranscript.isEmpty { transcriptCard }
                 progressCard
             }
             .padding()
@@ -54,11 +55,15 @@ struct ConversationView: View {
                 .controlSize(.large)
 
                 Button(action: model.talkOnPhone) {
-                    Label("Talk on iPhone", systemImage: "iphone.gen3")
-                        .frame(maxWidth: .infinity)
+                    HStack {
+                        if model.isStartingVoice { ProgressView().controlSize(.small) }
+                        Label(model.isStartingVoice ? "Connecting…" : "Talk on iPhone", systemImage: "iphone.gen3")
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
+                .disabled(model.isStartingVoice)
             } else {
                 if model.companion.phase == .waitingForWakePhrase {
                     Button("Simulate verified wake (development)", action: model.simulateVerifiedWakeForDevelopment)
@@ -74,6 +79,18 @@ struct ConversationView: View {
                     .controlSize(.large)
             }
         }
+    }
+
+    private var transcriptCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Live transcript", systemImage: "text.bubble")
+                .font(.headline)
+            Text(model.liveTranscript)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .textSelection(.enabled)
+        }
+        .padding()
+        .background(.background, in: RoundedRectangle(cornerRadius: 18))
     }
 
     private var progressCard: some View {

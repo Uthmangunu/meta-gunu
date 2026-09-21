@@ -13,18 +13,36 @@ final class AppModel: ObservableObject {
     @Published var budgetLimit = 25.0
     @Published var memories: [MemoryItem] = []
     @Published var tasks: [TaskItem] = []
+    @Published var isStartingVoice = false
+    @Published var liveTranscript = ""
+    @Published var gatewayWebSocketURL = "ws://localhost:8787/v1/live/connect"
+    @Published var gatewayToken = "local-development-only"
 
     private var machine = CompanionStateMachine()
     private let routes = AudioRouteMonitor()
+    private let phoneVoice = PhoneVoiceSession()
+    private var voiceStartTask: Task<Void, Never>?
 
     init() {
         routes.onChange = { [weak self] route in
             guard let self else { return }
             Task { @MainActor in
-                _ = self.machine.routeChanged(to: route)
+                let permission = self.machine.routeChanged(to: route)
                 self.companion = self.machine.state
+                if case .denied = permission, self.phoneVoice.isActive {
+                    self.phoneVoice.stop()
+                    self.routes.deactivate()
+                }
             }
         }
+        phoneVoice.onTranscript = { [weak self] delta in self?.liveTranscript += delta }
+        phoneVoice.onFailure = { [weak self] reason in
+            guard let self else { return }
+            self.machine.interrupt(reason: reason)
+            self.companion = self.machine.state
+            self.routes.deactivate()
+        }
+        phoneVoice.onEndSessionRequested = { [weak self] in self?.endSession() }
     }
 
     var stateTitle: String {
@@ -65,24 +83,66 @@ final class AppModel: ObservableObject {
     }
 
     func talkOnPhone() {
-        do {
-            let route = try routes.prepareExplicitPhoneInput()
-            _ = machine.talkOnPhone(currentRoute: route)
-        } catch {
-            machine.interrupt(reason: error.localizedDescription)
+        guard !isStartingVoice else { return }
+        isStartingVoice = true
+        liveTranscript = ""
+        voiceStartTask = Task { @MainActor in
+            defer {
+                isStartingVoice = false
+                voiceStartTask = nil
+            }
+            do {
+                guard await routes.requestPhoneMicrophonePermission() else {
+                    throw AudioRouteMonitor.RouteError.phonePermissionDenied
+                }
+                try Task.checkCancellation()
+                let route = try routes.prepareExplicitPhoneInput()
+                guard let url = URL(string: gatewayWebSocketURL),
+                      ["ws", "wss"].contains(url.scheme?.lowercased() ?? "") else {
+                    throw AudioRouteMonitor.RouteError.invalidGatewayURL
+                }
+                try await phoneVoice.start(
+                    configuration: GatewayVoiceConfiguration(webSocketURL: url, bearerToken: gatewayToken),
+                    conversationID: UUID(),
+                    expectedRoute: route
+                )
+                try Task.checkCancellation()
+                _ = machine.talkOnPhone(currentRoute: routes.currentInput())
+            } catch is CancellationError {
+                phoneVoice.stop()
+                routes.deactivate()
+                return
+            } catch {
+                phoneVoice.stop()
+                routes.deactivate()
+                machine.interrupt(reason: error.localizedDescription)
+            }
+            companion = machine.state
         }
-        companion = machine.state
     }
 
     func endSession() {
+        voiceStartTask?.cancel()
+        phoneVoice.stop()
         _ = machine.endSession()
         companion = machine.state
         if companion.mode == .stopped { routes.deactivate() }
     }
 
     func stopListening() {
+        voiceStartTask?.cancel()
+        phoneVoice.stop()
         machine.stopListening()
         routes.deactivate()
+        companion = machine.state
+    }
+
+    func appActivityChanged(isActive: Bool) {
+        guard !isActive, companion.mode == .phone || isStartingVoice else { return }
+        voiceStartTask?.cancel()
+        phoneVoice.stop()
+        routes.deactivate()
+        machine.interrupt(reason: "Phone voice paused because the app is no longer active.")
         companion = machine.state
     }
 }
@@ -118,7 +178,13 @@ final class AudioRouteMonitor {
     }
 
     func prepareExplicitPhoneInput() throws -> AudioRoute {
-        try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth])
+        var options: AVAudioSession.CategoryOptions = [.defaultToSpeaker]
+#if compiler(>=6.2)
+        options.insert(.allowBluetoothHFP)
+#else
+        options.insert(.allowBluetooth)
+#endif
+        try session.setCategory(.playAndRecord, mode: .voiceChat, options: options)
         try session.setActive(true)
         guard let builtIn = session.availableInputs?.first(where: { $0.portType == .builtInMic }) else {
             throw RouteError.phoneInputUnavailable
@@ -131,8 +197,25 @@ final class AudioRouteMonitor {
         try? session.setActive(false, options: .notifyOthersOnDeactivation)
     }
 
+    func requestPhoneMicrophonePermission() async -> Bool {
+        await withCheckedContinuation { continuation in
+            AVAudioApplication.requestRecordPermission { granted in
+                continuation.resume(returning: granted)
+            }
+        }
+    }
+
     enum RouteError: LocalizedError {
         case phoneInputUnavailable
-        var errorDescription: String? { "The iPhone microphone is unavailable." }
+        case phonePermissionDenied
+        case invalidGatewayURL
+
+        var errorDescription: String? {
+            switch self {
+            case .phoneInputUnavailable: "The iPhone microphone is unavailable."
+            case .phonePermissionDenied: "Microphone permission was not granted."
+            case .invalidGatewayURL: "Enter a valid ws:// or wss:// voice gateway address in Settings."
+            }
+        }
     }
 }

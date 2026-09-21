@@ -10,6 +10,7 @@ import {
 import { BudgetGuard } from "./budget.js";
 import type { GatewayConfig } from "./config.js";
 import { LaptopHub } from "./laptop-hub.js";
+import { LiveRelay } from "./live-relay.js";
 import { OpenAIProvider, UnconfiguredAIProvider, type AIProvider } from "./openai-provider.js";
 import { PostgresStore, type Store } from "./store.js";
 
@@ -20,6 +21,7 @@ export interface GatewayDependencies {
   ai: AIProvider;
   budget: BudgetGuard;
   laptop: LaptopHub;
+  live: LiveRelay;
 }
 
 export function productionDependencies(config: GatewayConfig): { dependencies: GatewayDependencies; pool: Pool } {
@@ -28,13 +30,21 @@ export function productionDependencies(config: GatewayConfig): { dependencies: G
   const ai = config.openAIKey
     ? new OpenAIProvider(config.openAIKey, config.liveModel, config.reasoningModel)
     : new UnconfiguredAIProvider();
+  const budget = new BudgetGuard(config.monthlySpendLimitUsd, config.spendWarningRatio);
   return {
     pool,
     dependencies: {
       store,
       ai,
-      budget: new BudgetGuard(config.monthlySpendLimitUsd, config.spendWarningRatio),
+      budget,
       laptop: new LaptopHub(config.laptopConnectorToken, store),
+      live: new LiveRelay({
+        apiToken: config.apiToken,
+        ...(config.openAIKey ? { openAIKey: config.openAIKey } : {}),
+        liveModel: config.liveModel,
+        store,
+        budget,
+      }),
     },
   };
 }
@@ -50,6 +60,7 @@ export function createGatewayServer(config: GatewayConfig, dependencies: Gateway
   });
 
   server.on("upgrade", (request, socket, head) => {
+    if (dependencies.live.upgrade(request, socket, head)) return;
     if (!dependencies.laptop.upgrade(request, socket, head)) socket.destroy();
   });
   return server;
